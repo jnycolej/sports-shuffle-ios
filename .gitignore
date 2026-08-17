@@ -15,5 +15,11 @@ DerivedData/
 Secrets.xcconfig
 *.secrets.xcconfig
 
+# Credentials / private keys
+*.pem
+*.p12
+*.mobileprovision
+credentials.json
+
 # macOS
 .DS_Store
