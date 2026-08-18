@@ -44,17 +44,6 @@ struct JoinCreateRoomView: View {
                             .tag(matchup)
                     }
                 }
-                .task {
-                    do {
-                        games = try await fetchSchedule()
-                        //print(games)
-                        if let firstGame = games.first {
-                            selectedGame = firstGame.teams.joined(separator: " vs ")
-                        }
-                    } catch {
-                        print("Schedule error:", error)
-                    }
-                }
                 .border(.black, width: 1.5)
                 NavigationLink("Create Room") {
                     GameLobbyView(

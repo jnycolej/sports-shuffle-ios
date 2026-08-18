@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum AppConfiguration {
+nonisolated enum AppConfiguration {
 
     static var apiBaseURL: URL {
         makeURL(
