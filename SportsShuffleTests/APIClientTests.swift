@@ -178,4 +178,92 @@ struct APIClientTests {
             Issue.record("Unexpected error: \(error)")
         }
     }
+    
+    @Test
+    func fetchScheduleMapsCancellation() async {
+        MockURLProtocol.requestHandler = { _ in
+            throw URLError(.cancelled)
+        }
+
+        let client = APIClient(
+            baseURL: URL(string: "https://example.test")!,
+            session: makeSession()
+        )
+
+        do {
+            _ = try await client.fetchSchedule()
+            Issue.record("Expected cancellation")
+        } catch let error as APIError {
+            #expect(error == .cancelled)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+    
+    @Test
+    func fetchScheduleRetriesTransientServerFailure() async throws {
+        var requestCount = 0
+
+        MockURLProtocol.requestHandler = { request in
+            requestCount += 1
+
+            if requestCount == 1 {
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 503,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!
+
+                return (response, Data())
+            }
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+
+            return (
+                response,
+                Data("[]".utf8)
+            )
+        }
+
+        let client = APIClient(
+            baseURL: URL(string: "https://example.test")!,
+            session: makeSession()
+        )
+
+        let schedules = try await client.fetchSchedule()
+
+        #expect(requestCount == 2)
+        #expect(schedules.isEmpty)
+    }
+    
+    @Test
+    func fetchScheduleDoesNotRetryCancellation() async {
+        var requestCount = 0
+
+        MockURLProtocol.requestHandler = { _ in
+            requestCount += 1
+            throw URLError(.cancelled)
+        }
+
+        let client = APIClient(
+            baseURL: URL(string: "https://example.test")!,
+            session: makeSession()
+        )
+
+        do {
+            _ = try await client.fetchSchedule()
+            Issue.record("Expected cancellation")
+        } catch let error as APIError {
+            #expect(error == .cancelled)
+            #expect(requestCount == 1)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
 }

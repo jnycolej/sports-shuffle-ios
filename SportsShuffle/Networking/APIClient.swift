@@ -15,9 +15,9 @@ nonisolated final class APIClient {
     func get<T: Decodable>(
         path: String,
         as type: T.Type,
-        cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+        cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
+        retries: Int = 1
     ) async throws -> T {
-
         guard let url = URL(
             string: path,
             relativeTo: baseURL
@@ -30,27 +30,51 @@ nonisolated final class APIClient {
         request.timeoutInterval = 10
         request.cachePolicy = cachePolicy
 
-        let data: Data
-        let response: URLResponse
+        var attempt = 0
 
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            throw mapNetworkError(error)
-        }
+        while true {
+            do {
+                let (data, response) = try await session.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
 
-        guard 200...299 ~= httpResponse.statusCode else {
-            throw APIError.badStatusCode(httpResponse.statusCode)
-        }
+                guard 200...299 ~= httpResponse.statusCode else {
+                    let error = APIError.badStatusCode(httpResponse.statusCode)
 
-        do {
-            return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            throw APIError.decodingFailed
+                    if attempt < retries && shouldRetry(error) {
+                        attempt += 1
+                        continue
+                    }
+
+                    throw error
+                }
+
+                do {
+                    return try JSONDecoder().decode(T.self, from: data)
+                } catch {
+                    throw APIError.decodingFailed
+                }
+
+            } catch let apiError as APIError {
+                if attempt < retries && shouldRetry(apiError) {
+                    attempt += 1
+                    continue
+                }
+
+                throw apiError
+
+            } catch {
+                let apiError = mapNetworkError(error)
+
+                if attempt < retries && shouldRetry(apiError) {
+                    attempt += 1
+                    continue
+                }
+
+                throw apiError
+            }
         }
     }
 
@@ -76,6 +100,26 @@ nonisolated final class APIClient {
 
         default:
             return .unknown
+        }
+    }
+    
+    private func shouldRetry(_ error: APIError) -> Bool {
+        switch error {
+        case .timedOut,
+                .offline:
+            return true
+            
+        case .badStatusCode(let statusCode):
+            return statusCode == 502 ||
+            statusCode == 503 ||
+            statusCode == 504
+            
+        case .invalidURL,
+                .invalidResponse,
+                .decodingFailed,
+                .cancelled,
+                .unknown:
+            return false
         }
     }
 }

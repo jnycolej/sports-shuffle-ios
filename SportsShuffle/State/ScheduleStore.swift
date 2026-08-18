@@ -11,14 +11,14 @@ import Observation
 @MainActor
 @Observable
 final class ScheduleStore {
-    private let apiClient: APIClient
+    private let scheduleProvider: any ScheduleProviding
     
     var schedules: [Schedule] = []
     var isLoading = false
     var error: APIError?
     
-    init(apiClient: APIClient = APIClient()) {
-        self.apiClient = apiClient
+    init(scheduleProvider: any ScheduleProviding = APIClient()) {
+        self.scheduleProvider = scheduleProvider
     }
         
     func loadSchedules() async {
@@ -30,11 +30,12 @@ final class ScheduleStore {
         }
         
         do {
-            schedules = try await apiClient.fetchSchedule()
+            schedules = try await scheduleProvider.fetchSchedule()
         } catch let apiError as APIError {
             error = apiError
         } catch {
             self.error = .unknown
         }
     }
+    
 }

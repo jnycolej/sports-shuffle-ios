@@ -11,7 +11,7 @@ enum APIError: Error, Equatable {
     case invalidURL
     case invalidResponse
     case badStatusCode(Int)
-    case requestFailed(statusCode: Int)
+    //case requestFailed(statusCode: Int)
     case decodingFailed
     case timedOut
     case offline
@@ -32,8 +32,8 @@ extension APIError {
             } else {
                 return "The request could not be completed."
             }
-        case .requestFailed:
-            return "The server could not complete the request."
+//        case .requestFailed:
+//            return "The server could not complete the request."
         case .decodingFailed:
             return "The app could not read the server response"
         case .timedOut:
