@@ -33,14 +33,14 @@ nonisolated struct Room: Identifiable, Codable, Equatable {
     var settings: RoomSettings
 }
 
-struct RoomSettings: Codable, Equatable {
+nonisolated struct RoomSettings: Codable, Equatable {
     let handSize: Int
     let openHandsAllowed: Bool
     let minPlayers: Int
     let version: Int
 }
 
-struct Matchup: Codable, Equatable {
+nonisolated struct Matchup: Codable, Equatable {
     let home: String
     let away: String
 }
